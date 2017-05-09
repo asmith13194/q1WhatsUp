@@ -1,0 +1,28 @@
+{
+  "name": "q1-whats-up",
+  "version": "1.0.0",
+  "description": "WhatsUp is an location based application that allows users to find events anywhere. Users can search for events with an auto location feature or make requests by city and state in the search box. Users may also filter results by different event types.",
+  "main": "q1.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asmith13194/q1WhatsUp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/asmith13194/q1WhatsUp/issues"
+  },
+  "homepage": "https://github.com/asmith13194/q1WhatsUp#readme",
+  "devDependencies": {
+    "eslint": "^3.19.0",
+    "eslint-config-airbnb-base": "^11.1.3",
+    "eslint-config-google": "^0.7.1",
+    "eslint-config-standard": "^10.2.1",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-standard": "^3.0.1"
+  }
+}

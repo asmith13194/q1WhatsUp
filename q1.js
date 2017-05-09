@@ -1,94 +1,69 @@
-// var dotenv = require('dotenv');
+// let dotenv = require('dotenv');
 //
-// var app_key = process.env.app_key;
+// let app_key = process.env.app_key;
 
-var map, infoWindow, searchLocation;
+let guhMap;
+let infoWindow;
+let searchLocation;
 
 function initAutocomplete() {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: new google.maps.LatLng(37.0902, -95.7129),
-    zoom: 4
+  guhMap = new google.maps.Map(document.getElementById('map'), {
+  center: new google.maps.LatLng(37.0902, -95.7129),
+  zoom: 4
   });
+  guhMap.addListener("click", function (event) {
+      // set the lat and lon of the click coordinates
+      let latitude = event.latLng.lat();
+      let longitude = event.latLng.lng();
+      let pos = {
+        lat: latitude,
+        lng: longitude,
+      };
+      searchLocation=latitude+','+longitude;
+      createEventMarkers(searchLocation);
+      guhMap.setCenter(pos);
+      guhMap.setZoom(12);
+      console.log(longitude,latitude);
+    })
   infoWindow = new google.maps.InfoWindow;
-  var input = document.getElementById('pac-input');
-        var searchBox = new google.maps.places.SearchBox(input);
-        map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-
-
-        var markers = [];
-        // Listen for the event fired when the user selects a prediction and retrieve
-        // more details for that place.
-        searchBox.addListener('places_changed', function() {
-          var places = searchBox.getPlaces();
-          console.log(places)
-          if (places.length == 0) {
-            return;
-          }
-
-          // Clear out the old markers.
-          markers.forEach(function(marker) {
-            marker.setMap(null);
-          });
-          markers = [];
-          var pos = {
-            lat: places[0].geometry.viewport.f.f,
-            lng: places[0].geometry.viewport.b.b
-          };
-
-          searchLocation=places[0].address_components[0].long_name+','+places[0].address_components[2].long_name
-          createInfoWindows(searchLocation)
-          map.setCenter(pos);
-          map.setZoom(12)
-          // // For each place, get the icon, name and location.
-          // var bounds = new google.maps.LatLngBounds();
-          // places.forEach(function(place) {
-          //   if (!place.geometry) {
-          //     console.log("Returned place contains no geometry");
-          //     return;
-          //   }
-          //   var icon = {
-          //     url: place.icon,
-          //     size: new google.maps.Size(71, 71),
-          //     origin: new google.maps.Point(0, 0),
-          //     anchor: new google.maps.Point(17, 34),
-          //     scaledSize: new google.maps.Size(25, 25)
-          //   };
-          //
-          //   // Create a marker for each place.
-          //   markers.push(new google.maps.Marker({
-          //     map: map,
-          //     icon: icon,
-          //     title: place.name,
-          //     position: place.geometry.location
-          //   }));
-          //
-          //   if (place.geometry.viewport) {
-          //     // Only geocodes have viewport.
-          //     bounds.union(place.geometry.viewport);
-          //   } else {
-          //     bounds.extend(place.geometry.location);
-          //   }
-          // });
-          // map.fitBounds(bounds);
-        });
+  let input = document.getElementById('pac-input');
+  let searchBox = new google.maps.places.SearchBox(input);
+  guhMap.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+  // Listen for the event fired when the user selects a prediction and retrieve more details for that place.
+  searchBox.addListener('places_changed',
+    function() {
+      let places = searchBox.getPlaces();
+      if (places.length == 0) {
+        return;
+      }
+      let pos = {
+        lat: places[0].geometry.location.lat(),
+        lng: places[0].geometry.location.lng(),
+      };
+      searchLocation=places[0].address_components[0].long_name+','+places[0].address_components[2].long_name;
+      createEventMarkers(searchLocation);
+      guhMap.setCenter(pos);
+      guhMap.setZoom(12);
+    });
 
   // Try HTML5 geolocation.
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
-      var pos = {
+      let pos = {
         lat: position.coords.latitude,
-        lng: position.coords.longitude
+        lng: position.coords.longitude,
       };
-      getMarkers()
-      map.setCenter(pos);
-      map.setZoom(12)
+
+      convertGeoCords(pos);
+      guhMap.setCenter(pos);
+      guhMap.setZoom(12);
+
     }, function() {
-      handleLocationError(true, infoWindow, map.getCenter());
+      handleLocationError(true, infoWindow, guhMap.getCenter());
     });
   } else {
     // Browser doesn't support Geolocation
-    handleLocationError(false, infoWindow, map.getCenter());
-
+    handleLocationError(false, infoWindow, guhMap.getCenter());
   }
 }
 
@@ -101,15 +76,14 @@ function handleLocationError(browserHasGeolocation, infoWindow, pos) {
 
 }
 
-function getMarkers() {
-  var $xhr = $.getJSON('https://maps.googleapis.com/maps/api/geocode/json?latlng=40.0150,-105.2705&key=XXXXXXXX');
+function convertGeoCords(cordObj) {
+  let $xhr = $.getJSON('https://maps.googleapis.com/maps/api/geocode/json?latlng='+cordObj.lat+','+cordObj.lng+'&key=XXXXX');
   $xhr.done(function(data) {
     if ($xhr.status !== 200) {
       return;
     }
     searchLocation = data.results[0].address_components[3].long_name + ',' + data.results[0].address_components[5].long_name
-
-    createInfoWindows(searchLocation)
+    createEventMarkers(searchLocation)
   })
   $xhr.fail(function(err) {
     console.log(err);
@@ -117,53 +91,129 @@ function getMarkers() {
 }
 
 
-
-function createInfoWindows(searchLocation){
-  var $hr = $.getJSON('https://g-eventful.herokuapp.com/json/events/search?app_key=XXXXXX&location=' + searchLocation);
+function createEventMarkers(searchLocation){
+  let callBegin = Date.now();
+  let $hr = $.getJSON('https://g-eventful.herokuapp.com/json/events/search?app_key=XXXXX&location=' + searchLocation + '&page_size=25');
   $hr.done(function(data) {
     if ($hr.status !== 200) {
       return;
     }
-    // console.log(data);
-    var infowindow = new google.maps.InfoWindow({ });
+    console.log((Date.now() - callBegin) / 1000);
+
+    let $jqxhr = $.post( "http://nps.kanelabs.com", {"type":"Trailhead"})
+    .done(function( data ) {
+    console.log( "Data Loaded: " + data );
+    if (data.err){
+      console.log(data.err)
+    }else {
+
+      console.log(data.success)
+    }
+  })
+  // console.log(data.events.event.length);
+  infowindow = new google.maps.InfoWindow
     // / Loop through the data and place a marker for each
     // set of coordinates.
-    for (var i = 0; i < data.events.event.length; i++) {
-      // console.log(data.events.event[i]['venue_name'])
+    for (let i = 0; i < data.events.event.length; i++) {
       // console.log(data.events.event[i])
-
-      var latLng = new google.maps.LatLng(data.events.event[i].latitude, data.events.event[i].longitude);
-      var marker = new google.maps.Marker({
+      let latLng = new google.maps.LatLng(data.events.event[i].latitude, data.events.event[i].longitude);
+      marker = new google.maps.Marker({
         position: latLng,
-        map: map,
-        title: 'Hover for Event Info'
+        map: guhMap,
+        title: 'Click for event info'
       });
       // marker.addListener('click', function() {
       //     map.setZoom(14);
       //     // console.log(marker)
       //     // map.setCenter(marker.getPosition());
       //   })
-      google.maps.event.addListener(marker, 'mouseover', (function(marker, i) {
+
+      google.maps.event.addListener(marker, 'click', (function(marker, i) {
+        infowindow.close()
         return function() {
+          markerMouseover=true;
+          let month = ['Jan','Feb','March','April','June','July','Aug','Sept','Oct','Nov','Dec'];
+          let startTimeArr = []
+          let startDate = []
+          let endTimeArr = []
+          let endDate = []
+          let when = ''
+          let startTimeStr=data.events.event[i].start_time
+          let startMonthInt = 0
+          let endMonthInt = 0
+          startTimeArr=data.events.event[i].start_time.split(' ')
+          startDate = startTimeArr[0].split('-')
+          console.log(startTimeArr)
+          if (startTimeStr!=="00:00:00"){
+            let startTimeArrSplit=[]
+            startTimeArrSplit=startTimeArr[1].split(':')
+            if(startTimeArrSplit[0]>12){
+              startTimeStr=(startTimeArrSplit[0]-12)+':'+startTimeArrSplit[1]+'pm'
+            }else{
+              startTimeStr=startTimeArrSplit[0]+':'+startTimeArrSplit[1]+'am'
+            }
+            // console.log(startTimeArrSplit)
+          }else{
+            startTimeStr='Click link for more information.'
+          }
+          if (data.events.event[i].stop_time!==null){
+            endTimeArr=data.events.event[i].stop_time.split(' ')
+            endDate = endTimeArr[0].split('-')
+            startMonthInt = parseInt(startDate[1],10)
+            endMonthInt = parseInt(endDate[1],10)
+            when = month[startMonthInt]+' '+startDate[2] + ' - ' + month[endMonthInt]+' '+endDate[2]
+            // console.log(startDate[1])
+            // console.log(parseInt(endDate[1],10))
+            // console.log(endDate)
+          }else{
+            when = 'Today'
+            // console.log(startDate)
+          }
+          let description = data.events.event[i].description
+          if (description===null){
+            description='Click link for more information'
+          }else{
+            description=data.events.event[i].description
+          }
+          let streetName = data.events.event[i].venue_address
+          if(streetName===null||streetName===','){
+            streetName=''
+          }else{
+            streetName = data.events.event[i].venue_address
+          }
+          let zipcode = data.events.event[i].postal_code
+          if(zipcode===null){
+            zipcode=''
+          }else{
+            zipcode = ', '+data.events.event[i].postal_code
+          }
+
           infowindow.setContent('<div id="content">'+
                       '<div id="siteNotice">'+
                       '</div>'+
-                      '<h1 id="firstHeading" class="firstHeading">'+data.events.event[i].title+'</h1>'+'<h2>'+data.events.event[i].venue_name+'</h2>'+
-                      '<header><b>'+data.events.event[i].venue_address+', '+data.events.event[i].city_name+', '+data.events.event[i].region_name+'</b></header>'
-                      +
-                      '<div id="bodyContent">'
-                      +data.events.event[i].description+'</p>'+
-                      '<p>Attribution: Eventful, <a href='+data.events.event[i].url+'>'+
-                      'eventfulapi.com</a></p>'+
+                      '<h1 id="firstHeading" class="firstHeading">'+data.events.event[i].title+'</h1>'+'<h3>'+data.events.event[i].venue_name+'</h3>'+
+                      '<h3><b>'+streetName+'<br>'+data.events.event[i].city_name+', '+data.events.event[i].region_name+zipcode+'</b></h3>'+
+                      '<div id="bodyContent">'+description+'</p>'
+                      +'<p><b>When: '+when
+                      // +startTimeStr
+                      +'</b></p>'+
+                      '<p>Special Thanks: <a href='+data.events.event[i].url+'>Eventful & '+data.events.event[i].venue_name+
+                      '</a></p>'+
                       '</div>'+
                       '</div>');
-          infowindow.open(map, marker);
+          infowindow.open(guhMap, marker);
         }
       })(marker, i))
 
+      google.maps.event.addListener(marker, 'mouseout', function(marker) {
+        window.setTimeout(function() {
+      infowindow.close();
+    }, 2000);
+      });
+
     }
 
-    // var clear = document.getElementById('search').value = '';
+    let clear = document.getElementById('pac-input').value = '';
   });
   $hr.fail(function(err) {
     console.log(err);
