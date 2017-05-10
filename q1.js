@@ -74,13 +74,16 @@ function createEventMarkers() {
     callAPI(searchLocation,searchType)
   }
 }
+var resultBoxes = document.getElementsByClassName('resultBoxes')
+
 function callAPI(searchLocation,searchType){
   // let callBegin = Date.now();
-  let $hr = $.getJSON('https://g-eventful.herokuapp.com/json/events/search?location=' + searchLocation + '&keywords='+searchType+'&page_size=25');
+  let $hr = $.getJSON('https://g-eventful.herokuapp.com/json/events/search?location=' + searchLocation + '&keywords='+searchType+'&page_size=55');
   $hr.done(function(data) {
     if ($hr.status !== 200) {
       return;
     }
+    $(resultBoxes).remove()
     createMarkerAndInfo(data)
     let clear = document.getElementById('pac-input').value = '';
   });
@@ -91,21 +94,31 @@ function callAPI(searchLocation,searchType){
 
 function createMarkerAndInfo(data){
   infowindow = new google.maps.InfoWindow
+  infowindow2 = new google.maps.InfoWindow
+  infowindow3 = new google.maps.InfoWindow
+  infowindow4 = new google.maps.InfoWindow
+
+
   // / Loop through the data and place a marker for each
   // set of coordinates.
   for (let i = 0; i < data.events.event.length; i++) {
     // console.log(data)
+    let pos = {
+      lat: data.events.event[i].latitude,
+      lng: data.events.event[i].longitude,
+    };
     let latLng = new google.maps.LatLng(data.events.event[i].latitude, data.events.event[i].longitude);
     marker = new google.maps.Marker({
       position: latLng,
       map: guhMap,
       title: 'Click for event info'
     });
-    markers.push(marker)
 
+    markers.push(marker)
+    createResultsBox(data,marker,i)
     google.maps.event.addListener(marker, 'click', (function(marker, i) {
-      infowindow.close()
       return function() {
+        closeInfoWindows()
         markerMouseover = true;
         let month = ['Jan', 'Feb', 'March', 'April', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
         let startTimeArr = []
@@ -181,11 +194,85 @@ function createMarkerAndInfo(data){
       }
     })(marker, i))
 
+
+    google.maps.event.addListener(marker, 'mouseover', (function(marker, i) {
+
+      return function() {
+        closeInfoWindows()
+        markerMouseover = true;
+        let month = ['Jan', 'Feb', 'March', 'April', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+        let startTimeArr = []
+        let startDate = []
+        let endTimeArr = []
+        let endDate = []
+        let when = ''
+        let startTimeStr = data.events.event[i].start_time
+        let startMonthInt = 0
+        let endMonthInt = 0
+        startTimeArr = data.events.event[i].start_time.split(' ')
+        startDate = startTimeArr[0].split('-')
+        if (startTimeStr !== "00:00:00") {
+          let startTimeArrSplit = []
+          startTimeArrSplit = startTimeArr[1].split(':')
+          if (startTimeArrSplit[0] > 12) {
+            startTimeStr = (startTimeArrSplit[0] - 12) + ':' + startTimeArrSplit[1] + 'pm'
+          } else {
+            startTimeStr = startTimeArrSplit[0] + ':' + startTimeArrSplit[1] + 'am'
+          }
+          // console.log(startTimeArrSplit)
+        } else {
+          startTimeStr = 'Click link for more information.'
+        }
+        if (data.events.event[i].stop_time !== null&&data.events.event[i].stop_time!==data.events.event[i].start_time) {
+          endTimeArr = data.events.event[i].stop_time.split(' ')
+          endDate = endTimeArr[0].split('-')
+          startMonthInt = parseInt(startDate[1], 10)
+          endMonthInt = parseInt(endDate[1], 10)
+          when = month[startMonthInt] + ' ' + startDate[2] + ' - ' + month[endMonthInt] + ' ' + endDate[2]
+          // console.log(startDate[1])
+          // console.log(parseInt(endDate[1],10))
+          // console.log(endDate)
+        } else {
+          when = 'Today'
+          // console.log(startDate)
+        }
+        let description = data.events.event[i].description
+        if (description === null) {
+          description = 'Click link for more information'
+        } else {
+          description = data.events.event[i].description
+        }
+        let streetName = data.events.event[i].venue_address
+        if (streetName === null || streetName === ',') {
+          streetName = ''
+        } else {
+          streetName = data.events.event[i].venue_address
+        }
+
+
+        infowindow2.setContent('<div id="content">' +
+          '<div id="siteNotice">' +
+          '</div>' +
+          '<p id="hoverInfo" class="firstHeading">'+ '<b>' + data.events.event[i].title + '</b>'+'<br>'
+          + data.events.event[i].venue_name + '<br>'
+          + streetName + '<br>'
+          +when+' <br>Click for more info. </p>' +
+          '</div>' +
+          '</div>');
+        infowindow2.open(guhMap, marker);
+        // console.log('hello')
+      }
+    })(marker, i))
+
     google.maps.event.addListener(marker, 'mouseout', function(marker) {
       window.setTimeout(function() {
         infowindow.close();
+        infowindow2.close();
+        infowindow3.close()
+        infowindow4.close()
       }, 2000);
     });
+
 
   }
 }
@@ -233,6 +320,211 @@ function createFilterControlBox(){
   centerControlDiv.index = 1;
   guhMap.controls[google.maps.ControlPosition.TOP_RIGHT].push(centerControlDiv);
 }
+var currentResult = 0
+var currentMore = 8
+function createResultsBox(data,marker,i){
+  if (i<currentResult+9){
+  var resultsControlDiv = document.createElement('div');
+  var resultsControl = new resultsControlBox(resultsControlDiv, map,data,marker,i);
+  resultsControlDiv.index = 1;
+  guhMap.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(resultsControlDiv);
+
+}
+
+}
+function resultsControlBox(controlDiv, guhMap,data,marker,i){
+  var resultsUI = document.createElement('div')
+  resultsUI.style.backgroundColor = '#fff';
+  resultsUI.style.border = '2px solid #fff';
+  resultsUI.style.height = '20vh'
+  resultsUI.style.width = '100px'
+  resultsUI.setAttribute('class','resultBoxes')
+  resultsUI.style.borderRadius = '3px';
+  resultsUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+  resultsUI.style.cursor = 'pointer';
+  // resultsUI.style.marginBottom = '22px';
+  resultsUI.style.textAlign = 'center';
+  resultsUI.style.innerHTML='Hello'
+  resultsUI.title = 'Click to change filter';
+  controlDiv.appendChild(resultsUI);
+
+  var resultsDiv = document.createElement('div')
+  resultsDiv.style.color = 'rgb(25,25,25)';
+  resultsDiv.style.fontFamily = 'Roboto,Arial,sans-serif';
+  resultsDiv.style.fontSize = '16px';
+  resultsDiv.style.lineHeight = '38px';
+  resultsDiv.style.paddingLeft = '5px';
+  resultsDiv.style.paddingRight = '5px';
+  if (i===currentMore){
+  resultsDiv.innerHTML = 'more...';
+  resultsUI.addEventListener('click',function(marker,i){
+    currentResult+=8
+    currentMore+= 8
+    $(resultBoxes).remove()
+    for (i=currentResult;i<currentResult+9;i++){
+      // console.log(data)
+      createResultsBox(data,markers[i],i)
+    }
+    // console.log(data,marker,i)
+    // createResultsBox(data,marker,i)
+  })
+
+}else{
+  resultsDiv.innerHTML = data.events.event[currentResult + i].title;
+
+}
+  resultsUI.appendChild(resultsDiv);
+  // console.log(data,marker,i)
+
+if(i<currentResult+8){
+  resultsUI.addEventListener('click', (function(marker, i) {
+  return function() {
+    closeInfoWindows()
+    let month = ['Jan', 'Feb', 'March', 'April', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    let startTimeArr = []
+    let startDate = []
+    let endTimeArr = []
+    let endDate = []
+    let when = ''
+    let startTimeStr = data.events.event[i+currentResult].start_time
+    let startMonthInt = 0
+    let endMonthInt = 0
+    startTimeArr = data.events.event[i+currentResult].start_time.split(' ')
+    startDate = startTimeArr[0].split('-')
+    console.log(startTimeArr)
+    if (startTimeStr !== "00:00:00") {
+      let startTimeArrSplit = []
+      startTimeArrSplit = startTimeArr[1].split(':')
+      if (startTimeArrSplit[0] > 12) {
+        startTimeStr = (startTimeArrSplit[0] - 12) + ':' + startTimeArrSplit[1] + 'pm'
+      } else {
+        startTimeStr = startTimeArrSplit[0] + ':' + startTimeArrSplit[1] + 'am'
+      }
+      // console.log(startTimeArrSplit)
+    } else {
+      startTimeStr = 'Click link for more information.'
+    }
+    if (data.events.event[i+currentResult].stop_time !== null) {
+      endTimeArr = data.events.event[i+currentResult].stop_time.split(' ')
+      endDate = endTimeArr[0].split('-')
+      startMonthInt = parseInt(startDate[1], 10)
+      endMonthInt = parseInt(endDate[1], 10)
+      when = month[startMonthInt] + ' ' + startDate[2] + ' - ' + month[endMonthInt] + ' ' + endDate[2]
+      // console.log(startDate[1])
+      // console.log(parseInt(endDate[1],10))
+      // console.log(endDate)
+    } else {
+      when = 'Today'
+      // console.log(startDate)
+    }
+    let description = data.events.event[i+currentResult].description
+    if (description === null) {
+      description = 'Click link for more information'
+    } else {
+      description = data.events.event[i+currentResult].description
+    }
+    let streetName = data.events.event[i+currentResult].venue_address
+    if (streetName === null || streetName === ',') {
+      streetName = ''
+    } else {
+      streetName = data.events.event[i+currentResult].venue_address
+    }
+    let zipcode = data.events.event[i+currentResult].postal_code
+    if (zipcode === null) {
+      zipcode = ''
+    } else {
+      zipcode = ', ' + data.events.event[i+currentResult].postal_code
+    }
+
+    infowindow3.setContent('<div id="content">' +
+      '<div id="siteNotice">' +
+      '</div>' +
+      '<h1 id="firstHeading" class="firstHeading">' + data.events.event[i+currentResult].title + '</h1>' + '<h3>' + data.events.event[i+currentResult].venue_name + '</h3>' +
+      '<h3><b>' + streetName + '<br>' + data.events.event[i+currentResult].city_name + ', ' + data.events.event[i+currentResult].region_name + zipcode + '</b></h3>' +
+      '<div id="bodyContent">' + description + '</p>' +
+      '<p><b>When: ' + when
+      // +startTimeStr
+      +
+      '</b></p>' +
+      '<p>Special Thanks: <a href=' + data.events.event[i+currentResult].url + '>Eventful & ' + data.events.event[i+currentResult].venue_name +
+      '</a></p>' +
+      '</div>' +
+      '</div>');
+    infowindow3.open(guhMap, marker);
+  }
+})(marker, i))
+
+
+resultsUI.addEventListener('mouseover', (function(marker, i) {
+    return function() {
+      closeInfoWindows()
+      markerMouseover = true;
+      let month = ['Jan', 'Feb', 'March', 'April', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+      let startTimeArr = []
+      let startDate = []
+      let endTimeArr = []
+      let endDate = []
+      let when = ''
+      let startTimeStr = data.events.event[i+currentResult].start_time
+      let startMonthInt = 0
+      let endMonthInt = 0
+      startTimeArr = data.events.event[i+currentResult].start_time.split(' ')
+      startDate = startTimeArr[0].split('-')
+      if (startTimeStr !== "00:00:00") {
+        let startTimeArrSplit = []
+        startTimeArrSplit = startTimeArr[1].split(':')
+        if (startTimeArrSplit[0] > 12) {
+          startTimeStr = (startTimeArrSplit[0] - 12) + ':' + startTimeArrSplit[1] + 'pm'
+        } else {
+          startTimeStr = startTimeArrSplit[0] + ':' + startTimeArrSplit[1] + 'am'
+        }
+        // console.log(startTimeArrSplit)
+      } else {
+        startTimeStr = 'Click link for more information.'
+      }
+      if (data.events.event[i+currentResult].stop_time !== null&&data.events.event[i+currentResult].stop_time!==data.events.event[i+currentResult].start_time) {
+        endTimeArr = data.events.event[i+currentResult].stop_time.split(' ')
+        endDate = endTimeArr[0].split('-')
+        startMonthInt = parseInt(startDate[1], 10)
+        endMonthInt = parseInt(endDate[1], 10)
+        when = month[startMonthInt] + ' ' + startDate[2] + ' - ' + month[endMonthInt] + ' ' + endDate[2]
+        // console.log(startDate[1])
+        // console.log(parseInt(endDate[1],10))
+        // console.log(endDate)
+      } else {
+        when = 'Today'
+        // console.log(startDate)
+      }
+      let description = data.events.event[i+currentResult].description
+      if (description === null) {
+        description = 'Click link for more information'
+      } else {
+        description = data.events.event[i+currentResult].description
+      }
+      let streetName = data.events.event[i+currentResult].venue_address
+      if (streetName === null || streetName === ',') {
+        streetName = ''
+      } else {
+        streetName = data.events.event[i+currentResult].venue_address
+      }
+
+
+      infowindow4.setContent('<div id="content">' +
+        '<div id="siteNotice">' +
+        '</div>' +
+        '<p id="hoverInfo" class="firstHeading">'+ '<b>' + data.events.event[i+currentResult].title + '</b>'+'<br>'
+        + data.events.event[i+currentResult].venue_name + '<br>'
+        + streetName + '<br>'
+        +when+' <br>Click for more info. </p>' +
+        '</div>' +
+        '</div>');
+      infowindow4.open(guhMap, marker);
+    }
+  })(marker, i))
+}
+
+}
+
 
 function filterControlBox(controlDiv, guhMap) {
 
@@ -374,4 +666,11 @@ function searchByClick(){
       function deleteMarkers() {
         clearMarkers();
         markers.length=0;
+      }
+
+      function closeInfoWindows(){
+        infowindow.close()
+        infowindow2.close()
+        infowindow3.close()
+        infowindow4.close()
       }
