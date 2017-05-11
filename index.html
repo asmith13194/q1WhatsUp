@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <script
-  src="https://code.jquery.com/jquery-3.2.1.min.js"
-  integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
-  crossorigin="anonymous"></script>
-    <script type="text/javascript" src="q1.js" defer> </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA-c7nBnaF1rAjzLZxQoSN4wWfgiFyTeFs&libraries=places&callback=initAutocomplete"
-         async defer></script>
-    <style>
+
+<head>
+  <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <!-- Compiled and minified CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/css/materialize.min.css">
+
+  <!-- Compiled and minified JavaScript -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.2/js/materialize.min.js"></script>
+  <script type="text/javascript" src="q1.js" defer>
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA-c7nBnaF1rAjzLZxQoSN4wWfgiFyTeFs&libraries=places&callback=initAutocomplete" async defer></script>
+  <style>
     /* Always set the map height explicitly to define the size of the div
      * element that contains the map. */
+
     #map {
       height: 100%;
     }
     /* Optional: Makes the sample page fill the window. */
-    html, body {
+
+    html,
+    body {
       height: 100%;
       margin: 0;
       padding: 0;
     }
+
     #description {
       font-family: Roboto;
       font-size: 15px;
@@ -87,19 +94,22 @@
       font-weight: 500;
       padding: 6px 12px;
     }
+
     #target {
       width: 345px;
     }
-    </style>
-  </head>
-  <body>
-    <input id="pac-input" class="controls" type="text" placeholder="Search Box">
-    <div id="map"></div>
-    <div class="container">
-      <div class="results">
+  </style>
+</head>
 
-      </div>
+<body>
+  <input id="pac-input" class="controls" type="text" placeholder="Type City, State to search">
+  <div id="map"></div>
+  <div class="container">
+    <div class="results">
+
     </div>
+  </div>
 
-  </body>
+</body>
+
 </html>
